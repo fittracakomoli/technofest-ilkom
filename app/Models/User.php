@@ -3,9 +3,15 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Role;
+use App\Models\Event;
+use App\Models\Member;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
@@ -21,6 +27,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role_id',
     ];
 
     /**
@@ -44,5 +51,79 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Relasi ke Role (user -> role)
+     */
+    public function role(): BelongsTo
+    {
+        return $this->belongsTo(Role::class, 'role_id');
+    }
+
+    /**
+     * Mengecek apakah user memiliki permission tertentu
+     */
+    public function hasPermission(string $permission): bool
+    {
+        return $this->role?->hasPermission($permission) ?? false;
+    }
+
+    /**
+     * Mengecek apakah user memiliki salah satu permission dari array
+     */
+    public function hasAnyPermission(array $permissions): bool
+    {
+        foreach ($permissions as $perm) {
+            if ($this->hasPermission($perm)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Mengecek apakah user memiliki semua permission di array
+     */
+    public function hasAllPermissions(array $permissions): bool
+    {
+        foreach ($permissions as $perm) {
+            if (!$this->hasPermission($perm)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Mengambil nama role user
+     */
+    public function getRoleName(): string
+    {
+        return $this->role?->name ?? 'No Role';
+    }
+
+    /**
+     * Mengecek apakah user adalah admin
+     */
+    public function isAdmin(): bool
+    {
+        return strtolower($this->getRoleName()) === 'admin';
+    }
+
+    /**
+     * Mengecek apakah user adalah organizer
+     */
+    public function isOrganizer(): bool
+    {
+        return strtolower($this->getRoleName()) === 'organizer';
+    }
+
+    /**
+     * Mengecek apakah user adalah customer
+     */
+    public function isCustomer(): bool
+    {
+        return strtolower($this->getRoleName()) === 'customer';
     }
 }
